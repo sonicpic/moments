@@ -29,6 +29,7 @@ export type  MemoVO = {
     location: string
     imgs: string
     favCount: number
+    liked: boolean
     userId: number
     createdAt: string
     updatedAt: string
@@ -56,6 +57,15 @@ export type UserVO = {
     coverUrl: string
     email: string
 }
+
+export type BackgroundMusicVO = {
+    url: string
+    title: string
+    lyricsUrl?: string
+    lyrics?: string
+    fileName?: string
+}
+
 export type SysConfigVO = {
     version: string,
     commitId: string,
@@ -69,6 +79,14 @@ export type SysConfigVO = {
     enableAutoLoadNextPage: boolean
     enableS3: boolean
     enableRegister: boolean
+    enableBackgroundMusic: boolean
+    backgroundMusicUrl: string
+    backgroundMusicTitle: string
+    backgroundMusicList: BackgroundMusicVO[]
+    hideFriendLink: boolean
+    hideColorMode: boolean
+    hideMobileLogin: boolean
+    coverDescription: string
     enableGoogleRecaptcha: boolean,
     googleSiteKey: string,
     enableComment: boolean,
