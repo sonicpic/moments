@@ -22,7 +22,7 @@
     <div
       class="flex items-center justify-center gap-3 p-4 text-gray-500 dark:text-white min-h-[120px]"
     >
-      <div class="flex flex-col items-center gap-1">
+      <div v-if="!sysConfig.hideColorMode" class="flex flex-col items-center gap-1">
         <span
           class="flex items-center bg-gray-200/75 dark:bg-gray-800/75 p-3 rounded-full"
         >
@@ -94,7 +94,7 @@
         <span class="text-sm mt-1">检索</span>
       </div>
       <div
-        v-if="$route.path == '/'"
+        v-if="!sysConfig.hideFriendLink && $route.path == '/'"
         class="flex flex-col items-center"
         @click="navigate('/friend')"
         title="友情链接"

@@ -1,6 +1,8 @@
 <template>
   <div
-    class="w-full md:w-[567px] mx-auto h-full shadow-2xl dark:bg-neutral-900"
+    :class="isMobileUserAgent
+      ? 'min-h-dvh w-full bg-white dark:bg-neutral-900 mx-auto'
+      : 'min-h-dvh w-full bg-white dark:bg-neutral-900 md:w-[567px] md:shadow-2xl mx-auto'"
   >
     <slot />
     <Footer />
@@ -8,9 +10,9 @@
 
   <div
     title="到顶部"
-    v-if="y > 200"
+    v-if="!isMobileUserAgent && y > 200"
     @click="y = 0"
-    class="hidden sm:block bottom-[20%] sm:right-[20%] md:right-[10%] lg:right-[15%] xl:right-[20%] 2xl:right-[28%] fixed flex items-center justify-center"
+    class="bottom-[20%] right-[10%] lg:right-[15%] xl:right-[20%] 2xl:right-[28%] fixed flex items-center justify-center"
   >
     <UIcon
       name="i-lets-icons-expand-top-stop"
@@ -18,57 +20,17 @@
     ></UIcon>
   </div>
 
-  <div class="sm:hidden relative">
-    <div class="right-0 bottom-10 fixed flex items-center justify-end">
-      <div class="flex flex-col items-center gap-2">
-        <div
-          v-if="y > 300"
-          @click="y = 0"
-          class="dark:bg-gray-900/85 mr-4 rounded-full bg-slate-50 w-10 h-10 flex items-center justify-center shadow-xl"
-        >
-          <UIcon
-            name="i-lets-icons-expand-top-stop"
-            class="w-6 h-6 text-[#9fc84a] cursor-pointer"
-          ></UIcon>
-        </div>
-        <NuxtLink
-          to="/new"
-          v-if="global.userinfo.token && $route.path === '/'"
-          class="dark:bg-gray-900/85 mr-4 rounded-full bg-slate-50 w-10 h-10 flex items-center justify-center shadow-xl"
-        >
-          <UIcon name="i-carbon-camera" class="w-6 h-6 text-[#9fc84a]"></UIcon>
-        </NuxtLink>
-        <div
-          class="dark:bg-gray-900/85 mr-4 rounded-full bg-slate-50 w-10 h-10 flex items-center justify-center shadow-xl"
-          @click="open = true"
-        >
-          <UIcon
-            name="i-icon-park-solid-more-four"
-            class="w-6 h-6 text-[#9fc84a] cursor-pointer"
-          ></UIcon>
-        </div>
-        <NuxtLink
-          to="/user/login"
-          v-if="!global.userinfo.token && $route.path === '/'"
-          class="dark:bg-gray-900/85 mr-4 rounded-full bg-slate-50 w-10 h-10 flex items-center justify-center shadow-xl"
-        >
-          <UIcon name="i-carbon-login" class="w-6 h-6 text-[#9fc84a]"></UIcon>
-        </NuxtLink>
-      </div>
-    </div>
-
-    <MobileNav :open="open" />
+  <div v-if="isMobileUserAgent">
+    <MobileNav />
   </div>
 </template>
 
 <script lang="ts" setup>
 import type { SysConfigVO, UserVO } from "~/types";
-import { useGlobalState } from "~/store";
 
-const global = useGlobalState();
-const open = useState<boolean>("sidebarOpen", () => false);
-const currentUser = useState<UserVO>("userinfo");
 const sysConfig = useState<SysConfigVO>("sysConfig");
+const currentUser = useState<UserVO>("userinfo");
+const isMobileUserAgent = useMobileUserAgent();
 const currentProfile = await useMyFetch<UserVO>("/user/profile");
 const sysConfigVO = await useMyFetch<SysConfigVO>("/sysConfig/get");
 if (currentProfile) {

@@ -6,6 +6,7 @@
     <div
       v-if="$route.path !== '/' && $route.path.indexOf('/memo/') < 0"
       :class="{ 'bg-[#4c4c4c]/80 z-10': y > 100 }"
+      :style="{ width: isMobileUserAgent ? '100%' : undefined }"
       class="flex fixed justify-between items-center p-4 w-full md:w-[567px] text-white top-0"
     >
       <NuxtLink class="flex items-center" title="返回主页">
@@ -54,10 +55,11 @@
     </div>
 
     <div
-      class="dark:bg-neutral-800 hidden sm:flex sm:absolute sm:-right-10 sm:rounded sm:p-2 sm:flex-col sm:w-fit justify-end shadow w-full flex-row top-0 p-1 flex gap-2 bg-white"
+      v-if="!isMobileUserAgent"
+      class="dark:bg-neutral-800 flex absolute -right-10 rounded p-2 flex-col w-fit justify-end shadow top-0 gap-2 bg-white"
     >
       <svg
-        v-if="mode.value === 'light'"
+        v-if="!sysConfig.hideColorMode && mode.value === 'light'"
         class="lucide lucide-moon-star-icon cursor-pointer"
         @click="toggleMode"
         xmlns="http://www.w3.org/2000/svg"
@@ -76,7 +78,7 @@
       </svg>
 
       <svg
-        v-else
+        v-else-if="!sysConfig.hideColorMode"
         class="lucide lucide-sun-icon cursor-pointer"
         @click="toggleMode"
         xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +118,7 @@
           class="text-[#9fc84a] w-5 h-5 cursor-pointer"
         />
       </NuxtLink>
-      <NuxtLink v-if="$route.path === '/'" to="/friend" title="友情链接">
+      <NuxtLink v-if="!sysConfig.hideFriendLink && $route.path === '/'" to="/friend" title="友情链接">
         <UIcon
           name="i-carbon-friendship"
           class="text-[#9fc84a] w-5 h-5 cursor-pointer"
@@ -150,7 +152,50 @@
       </NuxtLink>
     </div>
 
-    <img class="header-img w-full" :src="props.user.coverUrl" alt="" />
+    <div v-if="isMobileUserAgent" class="fixed top-3 right-3 z-30 flex items-center gap-2">
+      <NuxtLink
+        v-if="global.userinfo.token && $route.path === '/'"
+        to="/new"
+        title="发表"
+        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
+      >
+        <UIcon name="i-carbon-camera" class="h-5 w-5" />
+      </NuxtLink>
+      <NuxtLink
+        v-if="!sysConfig.hideMobileLogin && !global.userinfo.token && $route.path === '/'"
+        to="/user/login"
+        title="登录"
+        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
+      >
+        <UIcon name="i-carbon-login" class="h-5 w-5" />
+      </NuxtLink>
+      <button
+        type="button"
+        title="菜单"
+        aria-label="打开菜单"
+        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
+        @click="mobileNavOpen = true"
+      >
+        <UIcon name="i-icon-park-solid-more-four" class="h-5 w-5" />
+      </button>
+    </div>
+
+    <img
+      :class="sysConfig.coverDescription ? 'cursor-pointer' : ''"
+      class="header-img w-full"
+      :src="props.user.coverUrl"
+      alt=""
+      @click="showCoverDescription"
+    />
+    <Transition name="cover-tip">
+      <div
+        v-if="coverTip"
+        :style="{ left: `${coverTip.x}px`, top: `${coverTip.y}px` }"
+        class="pointer-events-none absolute z-20 max-w-[min(18rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-black/70 px-3 py-2 text-xs leading-5 text-white shadow-lg backdrop-blur"
+      >
+        {{ coverTip.text }}
+      </div>
+    </Transition>
     <div class="absolute right-2 bottom-[-40px]">
       <div class="userinfo flex flex-col">
         <div class="flex flex-row items-center gap-4 justify-end">
@@ -171,15 +216,20 @@
 </template>
 <script setup lang="ts">
 import { toast } from "vue-sonner";
-import type { UserVO } from "~/types";
+import type { SysConfigVO, UserVO } from "~/types";
 import { useGlobalState } from "~/store";
 
 const global = useGlobalState();
 const route = useRoute();
+const mobileNavOpen = useState<boolean>("sidebarOpen", () => false);
+const isMobileUserAgent = useMobileUserAgent();
+const sysConfig = useState<SysConfigVO>("sysConfig");
 
 const props = defineProps<{ user: UserVO }>();
 const mode = useColorMode();
 const { y } = useWindowScroll();
+const coverTip = ref<{ x: number; y: number; text: string }>();
+let coverTipTimer: ReturnType<typeof setTimeout> | undefined;
 
 const logout = async () => {
   global.value.userinfo = {};
@@ -196,6 +246,51 @@ const toggleMode = () => {
     toast.success("显示模式将跟随系统设置");
   }
 };
+
+const showCoverDescription = (event: MouseEvent) => {
+  if (coverTip.value) {
+    coverTip.value = undefined;
+    if (coverTipTimer) {
+      clearTimeout(coverTipTimer);
+      coverTipTimer = undefined;
+    }
+    return;
+  }
+  const description = sysConfig.value.coverDescription?.trim();
+  if (!description) {
+    return;
+  }
+  const target = event.currentTarget as HTMLImageElement;
+  const rect = target.getBoundingClientRect();
+  coverTip.value = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+    text: description,
+  };
+  if (coverTipTimer) {
+    clearTimeout(coverTipTimer);
+  }
+  coverTipTimer = setTimeout(() => {
+    coverTip.value = undefined;
+  }, 2600);
+};
+
+onBeforeUnmount(() => {
+  if (coverTipTimer) {
+    clearTimeout(coverTipTimer);
+  }
+});
 </script>
 
-<style scoped></style>
+<style scoped>
+.cover-tip-enter-active,
+.cover-tip-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.cover-tip-enter-from,
+.cover-tip-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -35%) scale(0.96);
+}
+</style>
