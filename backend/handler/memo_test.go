@@ -43,7 +43,7 @@ func TestExternalAccessStartAt(t *testing.T) {
 				return
 			}
 			if got == nil || !got.Equal(*tt.want) {
-				t.Fatalf("expected %s, got %v", tt.want, got)
+				t.Fatalf("expected %v, got %v", tt.want, got)
 			}
 		})
 	}
