@@ -10,6 +10,21 @@ export type LoginResp = {
     username: string
 }
 
+export type VisitorVO = {
+    id: number
+    ipAddress: string
+    userAgent: string
+    deviceType: string
+    deviceModel: string
+    browser: string
+    browserVer: string
+    os: string
+    osVersion: string
+    firstSeenAt: string
+    lastSeenAt: string
+    visitCount: number
+}
+
 export type CommentVO = {
     id: number
     content: string

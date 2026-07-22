@@ -133,6 +133,10 @@
       <SettingsCard title="文件维护" description="仅清理未被内容、头像、背景音乐或歌词引用的本地文件。">
         <UButton color="red" variant="soft" @click="showCleanFileModal = true">清理未使用的本地文件</UButton>
       </SettingsCard>
+
+      <SettingsCard v-if="isAdmin" title="访客记录" description="查看服务器记录的访问时间、IP、设备和浏览器信息。">
+        <UButton variant="soft" icon="i-carbon-view" to="/sys/visitors">查看访客记录</UButton>
+      </SettingsCard>
     </section>
   </main>
 
@@ -149,10 +153,13 @@
 import type { BackgroundMusicVO, SysConfigVO, UserVO } from "~/types";
 import { toast } from "vue-sonner";
 import { useUpload } from "~/utils";
+import { useGlobalState } from "~/store";
 
 type Tab = "site" | "appearance" | "media" | "service";
 
 const currentUser = useState<UserVO>("userinfo");
+const global = useGlobalState();
+const isAdmin = computed(() => global.value.userinfo.id === 1);
 const sysConfig = useState<SysConfigVO>("sysConfig", () => ({}) as SysConfigVO);
 const activeTab = ref<Tab>("site");
 const tabs: { value: Tab; label: string }[] = [
