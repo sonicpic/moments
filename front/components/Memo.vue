@@ -137,7 +137,7 @@
             }}
           </div>
           <div
-            @click="showToolbar = true"
+            @click.stop="showToolbar = !showToolbar"
             class="toolbar-icon px-2 py-1 bg-[#f7f7f7] dark:bg-slate-700 hover:bg-[#dedede] cursor-pointer rounded flex items-center justify-center"
           >
             <img
@@ -150,6 +150,7 @@
             v-if="showToolbar"
             ref="toolbarRef"
             class="absolute top-[-8px] right-[32px] bg-[#4c4c4c] rounded text-white p-2"
+            @click.stop
           >
             <div class="flex max-w-[calc(100vw-64px)] flex-row flex-wrap justify-end gap-2">
               <div
@@ -192,12 +193,14 @@
                   <UIcon name="i-carbon-edit" />
                   <div>编辑</div>
                 </div>
-                <Confirm @ok="removeMemo(item.id)" @cancel="showToolbar = false">
-                  <div class="flex flex-row gap-1 cursor-pointer items-center px-4 text-red-300">
-                    <UIcon name="i-carbon-trash-can" />
-                    <div>删除</div>
-                  </div>
-                </Confirm>
+                <button
+                  type="button"
+                  class="flex flex-row gap-1 cursor-pointer items-center px-4 text-red-300"
+                  @click.stop="requestRemoveMemo(item.id)"
+                >
+                  <UIcon name="i-carbon-trash-can" />
+                  <span>删除</span>
+                </button>
               </template>
             </div>
           </div>
@@ -245,27 +248,19 @@
                     <div class="text-sm mt-1">编辑</div>
                   </div>
                 </template>
-                <template
-                  v-if="
-                    isAdmin
-                  "
+                <button
+                  v-if="isAdmin"
+                  type="button"
+                  class="flex flex-col gap-1 cursor-pointer items-center"
+                  @click="requestRemoveMemo(item.id)"
                 >
-                  <Confirm
-                    @ok="removeMemo(item.id)"
-                    @cancel="moreToolbar = false"
+                  <span
+                    class="flex items-center bg-gray-200/75 dark:bg-gray-800/75 p-3 rounded-full"
                   >
-                    <div
-                      class="flex flex-col gap-1 cursor-pointer items-center"
-                    >
-                      <span
-                        class="flex items-center bg-gray-200/75 dark:bg-gray-800/75 p-3 rounded-full"
-                      >
-                        <UIcon class="w-5 h-5" name="i-carbon-trash-can" />
-                      </span>
-                      <div class="text-sm mt-1">删除</div>
-                    </div>
-                  </Confirm>
-                </template>
+                    <UIcon class="w-5 h-5" name="i-carbon-trash-can" />
+                  </span>
+                  <span class="text-sm mt-1">删除</span>
+                </button>
               </div>
             </UModal>
           </template>
@@ -349,8 +344,10 @@ const item = computed(() => {
 });
 
 const global = useGlobalState();
-const isAdmin = computed(() => global.userinfo.id === 1);
-const canViewInteractions = computed(() => sysConfig.value.showVisitorInteractions || isAdmin.value);
+const isAdmin = computed(() => global.value?.userinfo?.id === 1);
+const canViewInteractions = computed(
+  () => sysConfig.value?.showVisitorInteractions !== false || isAdmin.value,
+);
 
 const moreToolbar = ref(false);
 
@@ -402,6 +399,12 @@ const removeMemo = async (id: number) => {
     memoReloadEvent.emit();
   }
   moreToolbar.value = false;
+};
+const requestRemoveMemo = async (id: number) => {
+  showToolbar.value = false;
+  moreToolbar.value = false;
+  if (!window.confirm("确定删除这条朋友圈吗？此操作不可恢复。")) return;
+  await removeMemo(id);
 };
 const setPinned = async (id: number) => {
   await useMyFetch("/memo/setPinned?id=" + id);

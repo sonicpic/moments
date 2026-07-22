@@ -40,9 +40,11 @@ const currentUser = useState<UserVO>("userinfo");
 const isMobileUserAgent = useMobileUserAgent();
 const currentProfile = await useMyFetch<UserVO>("/user/profile");
 const sysConfigVO = await useMyFetch<SysConfigVO>("/sysConfig/get");
+if (sysConfigVO) {
+  sysConfig.value = sysConfigVO;
+}
 if (currentProfile) {
   currentUser.value = currentProfile;
-  sysConfig.value = sysConfigVO;
 }
 const { y } = useWindowScroll();
 useHead({
