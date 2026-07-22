@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	fs_util "github.com/kingwrcy/moments/util"
 
@@ -230,6 +232,20 @@ func (f FileHandler) Clean(c echo.Context) error {
 		usedFiles = append(usedFiles, sysConfigVo.Favicon)
 	}
 
+	// background music and lyric files
+	for _, file := range []string{sysConfigVo.BackgroundMusicUrl} {
+		if strings.HasPrefix(file, "/upload/") {
+			usedFiles = append(usedFiles, file)
+		}
+	}
+	for _, music := range sysConfigVo.BackgroundMusicList {
+		for _, file := range []string{music.URL, music.LyricsURL} {
+			if strings.HasPrefix(file, "/upload/") {
+				usedFiles = append(usedFiles, file)
+			}
+		}
+	}
+
 	// user avatar url
 	userAvatarFiles := make([]string, 0)
 	f.base.db.Model(&db.User{}).Where("avatarUrl is not null and avatarUrl != ''").Pluck("avatarUrl", &userAvatarFiles)
@@ -273,6 +289,7 @@ func (f FileHandler) Clean(c echo.Context) error {
 
 type PreSignedReq struct {
 	ContentType string `json:"contentType,omitempty"` //图片mime类型
+	FileName    string `json:"fileName,omitempty"`    //原始文件名，仅用于保留安全的扩展名
 }
 
 type s3PresignedResp struct {
@@ -336,16 +353,36 @@ func (f FileHandler) S3PreSigned(c echo.Context) error {
 	presignedClient := s3.NewPresignClient(client)
 
 	key := fmt.Sprintf(
-		"moments/%s/%s",
+		"%s/%s",
 		time.Now().Format("2006/01/02"),
 		strings.ReplaceAll(uuid.NewString(), "-", ""),
 	)
+	ext := filepath.Ext(filepath.Base(req.FileName))
+	if len(ext) > 1 && len(ext) <= 16 {
+		valid := true
+		for _, char := range ext[1:] {
+			if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
+				valid = false
+				break
+			}
+		}
+		if valid {
+			key += ext
+		}
+	}
+	contentType := strings.TrimSpace(req.ContentType)
+	if contentType == "" {
+		contentType = mime.TypeByExtension(ext)
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
 	presignedResult, err := presignedClient.PresignPutObject(
 		context.TODO(),
 		&s3.PutObjectInput{
 			Bucket:      aws.String(sysConfigVo.S3.Bucket),
 			Key:         aws.String(key),
-			ContentType: aws.String(req.ContentType),
+			ContentType: aws.String(contentType),
 		},
 		func(opts *s3.PresignOptions) {
 			opts.Expires = time.Minute * 5
@@ -361,7 +398,7 @@ func (f FileHandler) S3PreSigned(c echo.Context) error {
 		c,
 		s3PresignedResp{
 			PreSignedUrl: presignedResult.URL,
-			ImageUrl:     fmt.Sprintf("%s/%s", sysConfigVo.S3.Domain, key),
+			ImageUrl:     joinResourceURL(sysConfigVo.S3.Domain, key),
 		},
 	)
 }

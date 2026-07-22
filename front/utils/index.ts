@@ -69,6 +69,8 @@ type OnTotalProgressCallback = (
   progress: number,
 ) => void
 
+type UploadFiles = FileList | File[]
+
 const upload2S3WithProgress = async (
   preSignedUrl: string,
   file: File,
@@ -78,7 +80,11 @@ const upload2S3WithProgress = async (
     const xhr = new XMLHttpRequest()
 
     xhr.addEventListener("load", () => {
-      resolve()
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+        return
+      }
+      reject(new Error(`File upload failed (${xhr.status})`))
     })
     xhr.addEventListener("error", () => reject(new Error("File upload failed")))
     xhr.addEventListener("abort", () =>
@@ -87,22 +93,25 @@ const upload2S3WithProgress = async (
     xhr.upload.addEventListener("progress", e => onProgress(e.loaded / e.total))
 
     xhr.open("PUT", preSignedUrl, true)
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream")
     xhr.send(file)
   })
 
 const upload2S3 = async (
-  files: FileList,
+  files: UploadFiles,
   onProgress?: OnTotalProgressCallback,
 ): Promise<string[]> => {
   const result: string[] = []
 
   for (let i = 0; i < files.length; i++) {
     try {
+      const file = files[i]
       const res = await useMyFetch<{
         preSignedUrl: string
         imageUrl: string
       }>("/file/s3PreSigned", {
-        contentType: files[0].type,
+        contentType: file.type || "application/octet-stream",
+        fileName: file.name,
       })
 
       if (!res || !res.preSignedUrl) {
@@ -110,7 +119,6 @@ const upload2S3 = async (
         continue
       }
 
-      const file = files[i]
       await upload2S3WithProgress(res.preSignedUrl, file, progress => {
         if (onProgress) {
           onProgress(files.length, i + 1, file.name, progress)
@@ -161,7 +169,7 @@ const uploadFile2ServerWithProgress = (
   })
 
 const uploadFile2Server = async (
-  files: FileList,
+  files: UploadFiles,
   onProgress?: OnTotalProgressCallback,
 ): Promise<string[]> => {
   const result: string[] = []
@@ -211,7 +219,7 @@ const uploadFile2Server = async (
 }
 
 export const useUpload = async (
-  files: FileList,
+  files: UploadFiles,
   onProgress?: OnTotalProgressCallback,
 ): Promise<string[]> => {
   if (files.length === 0) {

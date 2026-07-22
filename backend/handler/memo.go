@@ -664,7 +664,7 @@ func (m MemoHandler) GetDoubanMovieInfo(c echo.Context) error {
 		}
 		defer imageResponse.Body.Close()
 		client := s3.NewFromConfig(cfg)
-		key := fmt.Sprintf("moments/%s/%s", time.Now().Format("2006/01/02"), strings.ReplaceAll(uuid.NewString(), "-", ""))
+		key := fmt.Sprintf("%s/%s", time.Now().Format("2006/01/02"), strings.ReplaceAll(uuid.NewString(), "-", ""))
 		_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
 			Bucket: aws.String(sysConfigVo.S3.Bucket),
 			Key:    aws.String(key),
@@ -673,7 +673,7 @@ func (m MemoHandler) GetDoubanMovieInfo(c echo.Context) error {
 		if err != nil {
 			return FailRespWithMsg(c, Fail, fmt.Sprintf("上传图片到s3异常:%s", err.Error()))
 		}
-		book.Image = fmt.Sprintf("%s/%s", sysConfigVo.S3.Domain, key)
+		book.Image = joinResourceURL(sysConfigVo.S3.Domain, key)
 	} else {
 		image, err := downloadImage(book.Image, m.base.log, m.base.cfg)
 		if err != nil {
@@ -817,7 +817,7 @@ func (m MemoHandler) GetDoubanBookInfo(c echo.Context) error {
 		}
 		defer imageResponse.Body.Close()
 		s3Client := s3.NewFromConfig(cfg)
-		key := fmt.Sprintf("moments/%s/%s", time.Now().Format("2006/01/02"), strings.ReplaceAll(uuid.NewString(), "-", ""))
+		key := fmt.Sprintf("%s/%s", time.Now().Format("2006/01/02"), strings.ReplaceAll(uuid.NewString(), "-", ""))
 		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 			Bucket: aws.String(sysConfigVo.S3.Bucket),
 			Key:    aws.String(key),
@@ -826,7 +826,7 @@ func (m MemoHandler) GetDoubanBookInfo(c echo.Context) error {
 		if err != nil {
 			return FailRespWithMsg(c, Fail, fmt.Sprintf("上传图片到s3异常:%s", err.Error()))
 		}
-		book.Image = fmt.Sprintf("%s/%s", sysConfigVo.S3.Domain, key)
+		book.Image = joinResourceURL(sysConfigVo.S3.Domain, key)
 	} else {
 		image, err := downloadImage(book.Image, m.base.log, m.base.cfg)
 		if err != nil {
