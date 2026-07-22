@@ -11,7 +11,8 @@ COPY front/. .
 RUN --mount=type=tmpfs,target=/app/node_modules \
     pnpm config set store-dir /app/node_modules/.pnpm-store && \
     pnpm install --frozen-lockfile && \
-    pnpm run generate
+    pnpm run generate && \
+    find /app/.nuxt -mindepth 1 -delete
 
 FROM golang:1.23.3-alpine AS backend
 ARG VERSION
