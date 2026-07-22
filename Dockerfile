@@ -9,6 +9,7 @@ COPY front/. .
 # them on a temporary mount avoids retaining a large node_modules build layer
 # on small production hosts.
 RUN --mount=type=tmpfs,target=/app/node_modules \
+    --mount=type=tmpfs,target=/app/.nuxt \
     pnpm config set store-dir /app/node_modules/.pnpm-store && \
     pnpm install --frozen-lockfile && \
     pnpm run generate && \
