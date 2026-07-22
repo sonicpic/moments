@@ -43,6 +43,53 @@ func NewMemoHandler(injector do.Injector) *MemoHandler {
 	}
 }
 
+func (m MemoHandler) likeVisitorID(c echo.Context, currentUser *db.User) string {
+	if currentUser != nil && currentUser.Id > 0 {
+		return fmt.Sprintf("user:%d", currentUser.Id)
+	}
+
+	const cookieName = "moments_like_visitor"
+	if cookie, err := c.Cookie(cookieName); err == nil && cookie.Value != "" {
+		return "guest:" + cookie.Value
+	}
+
+	visitorID := uuid.NewString()
+	c.SetCookie(&http.Cookie{
+		Name:     cookieName,
+		Value:    visitorID,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 365,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	return "guest:" + visitorID
+}
+
+func (m MemoHandler) applyMemoLikeState(visitorID string, memos []db.Memo) {
+	if visitorID == "" || len(memos) == 0 {
+		return
+	}
+
+	memoIDs := make([]int32, 0, len(memos))
+	for _, memo := range memos {
+		memoIDs = append(memoIDs, memo.Id)
+	}
+
+	var likes []db.MemoLike
+	if err := m.base.db.Where("visitorId = ? AND memoId IN ?", visitorID, memoIDs).Find(&likes).Error; err != nil {
+		m.base.log.Error().Msgf("读取点赞状态失败: %v", err)
+		return
+	}
+
+	likedMemoIDs := make(map[int32]struct{}, len(likes))
+	for _, like := range likes {
+		likedMemoIDs[like.MemoID] = struct{}{}
+	}
+	for index := range memos {
+		_, memos[index].Liked = likedMemoIDs[memos[index].Id]
+	}
+}
+
 type memoListResp struct {
 	List    []db.Memo `json:"list,omitempty"`    //memo列表
 	HasNext bool      `json:"hasNext,omitempty"` //是否有下一页
@@ -181,6 +228,7 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 	for i := range list {
 		m.handleImgConfigs(&sysConfigVO, &list[i])
 	}
+	m.applyMemoLikeState(m.likeVisitorID(c, currentUser), list)
 
 	return SuccessResp(c, memoListResp{
 		List:    list,
@@ -223,6 +271,11 @@ func (m MemoHandler) RemoveMemo(c echo.Context) error {
 	return SuccessResp(c, h{})
 }
 
+type likeMemoResp struct {
+	Liked    bool  `json:"liked"`
+	FavCount int32 `json:"favCount"`
+}
+
 // LikeMemo godoc
 //
 //	@Tags		Memo
@@ -234,7 +287,6 @@ func (m MemoHandler) RemoveMemo(c echo.Context) error {
 //	@Router		/api/memo/like [post]
 func (m MemoHandler) LikeMemo(c echo.Context) error {
 	var (
-		memo        db.Memo
 		sysConfig   db.SysConfig
 		sysConfigVO vo.FullSysConfigVO
 		token       string
@@ -256,14 +308,53 @@ func (m MemoHandler) LikeMemo(c echo.Context) error {
 			return FailRespWithMsg(c, Fail, err.Error())
 		}
 	}
-	if err = m.base.db.First(&memo, id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	context := c.(CustomContext)
+	visitorID := m.likeVisitorID(c, context.CurrentUser())
+	result := likeMemoResp{}
+
+	err = m.base.db.Transaction(func(tx *gorm.DB) error {
+		var memo db.Memo
+		if err := tx.First(&memo, id).Error; err != nil {
+			return err
+		}
+
+		var existingLike db.MemoLike
+		likeErr := tx.Where("memoId = ? AND visitorId = ?", id, visitorID).First(&existingLike).Error
+		switch {
+		case errors.Is(likeErr, gorm.ErrRecordNotFound):
+			if err := tx.Create(&db.MemoLike{MemoID: memo.Id, VisitorID: visitorID}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&db.Memo{}).Where("id = ?", memo.Id).UpdateColumn("favCount", gorm.Expr("favCount + 1")).Error; err != nil {
+				return err
+			}
+			result.Liked = true
+		case likeErr != nil:
+			return likeErr
+		default:
+			if err := tx.Delete(&existingLike).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&db.Memo{}).Where("id = ?", memo.Id).UpdateColumn("favCount", gorm.Expr("CASE WHEN favCount > 0 THEN favCount - 1 ELSE 0 END")).Error; err != nil {
+				return err
+			}
+			result.Liked = false
+		}
+
+		if err := tx.Select("favCount").First(&memo, memo.Id).Error; err != nil {
+			return err
+		}
+		result.FavCount = memo.FavCount
+		return nil
+	})
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return FailResp(c, ParamError)
 	}
-	memo.FavCount = memo.FavCount + 1
-	if m.base.db.Updates(&memo).RowsAffected != 1 {
-		return FailRespWithMsg(c, Fail, "点赞失败")
+	if err != nil {
+		m.base.log.Error().Msgf("切换点赞状态失败: %v", err)
+		return FailRespWithMsg(c, Fail, "操作失败")
 	}
-	return SuccessResp(c, h{})
+	return SuccessResp(c, result)
 }
 
 // FindAndReplaceTags 处理 markdown 文本

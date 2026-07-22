@@ -337,7 +337,7 @@ const moreToolbar = ref(false);
 
 const showToolbar = ref(false);
 const toolbarRef = ref(null);
-const liked = ref(false);
+const liked = ref(Boolean(props.memo.liked));
 onClickOutside(toolbarRef, () => (showToolbar.value = false));
 
 const location = computed(() => {
@@ -396,31 +396,23 @@ const setPinned = async (id: number) => {
 };
 
 const doLike = async (id: number, token: string = "") => {
-  const likes = JSON.parse(
-    localStorage.getItem("likeMemos") || "[]"
-  ) as Array<number>;
-  await useMyFetch(`/memo/like?id=${id}&token=${token}`);
-  toast.success("点赞成功!");
-  likes.push(id);
-  localStorage.setItem("likeMemos", JSON.stringify(likes));
+  const result = await useMyFetch<{ liked: boolean; favCount: number }>(
+    `/memo/like?id=${id}&token=${token}`,
+  );
+  liked.value = result.liked;
+  props.memo.liked = result.liked;
+  props.memo.favCount = result.favCount;
+  toast.success(result.liked ? "点赞成功!" : "已取消赞");
   memoChangedEvent.emit(id);
-  liked.value = true;
 };
 
 const likeMemo = async (id: number) => {
   showToolbar.value = false;
-  const likes = JSON.parse(
-    localStorage.getItem("likeMemos") || "[]"
-  ) as Array<number>;
-  if (likes.includes(id)) {
-    toast.warning("您已经点赞过了!");
-    return;
-  }
 
   if (sysConfig.value.enableGoogleRecaptcha) {
     grecaptcha.ready(() => {
       grecaptcha
-        .execute(sysConfig.value.googleSiteKey, { action: "newComment" })
+        .execute(sysConfig.value.googleSiteKey, { action: "likeMemo" })
         .then(async (token) => {
           await doLike(id, token);
         });
@@ -431,10 +423,7 @@ const likeMemo = async (id: number) => {
 };
 
 onMounted(() => {
-  const likes = JSON.parse(
-    localStorage.getItem("likeMemos") || "[]"
-  ) as Array<number>;
-  liked.value = likes.findIndex((r) => r === item.value.id) >= 0;
+  liked.value = Boolean(item.value.liked);
   if (!isDetailPage.value) {
     setTimeout(() => {
       const { height } = useElementSize(contentRef.value);

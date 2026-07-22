@@ -28,6 +28,7 @@ type Memo struct {
 	Comments        []Comment        `json:"comments,omitempty"`
 	Tags            *string          `json:"tags,omitempty"`
 	ImgConfigs      *[]*vo.ImgConfig `gorm:"-" json:"imgConfigs,omitempty"`
+	Liked           bool             `gorm:"-" json:"liked"`
 }
 
 func (m *Memo) TableName() string {
