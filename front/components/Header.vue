@@ -152,33 +152,35 @@
       </NuxtLink>
     </div>
 
-    <div v-if="isMobileUserAgent" class="fixed top-3 right-3 z-30 flex items-center gap-2">
-      <NuxtLink
-        v-if="global.userinfo.token && $route.path === '/'"
-        to="/new"
-        title="发表"
-        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
-      >
-        <UIcon name="i-carbon-camera" class="h-5 w-5" />
-      </NuxtLink>
-      <NuxtLink
-        v-if="!sysConfig.hideMobileLogin && !global.userinfo.token && $route.path === '/'"
-        to="/user/login"
-        title="登录"
-        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
-      >
-        <UIcon name="i-carbon-login" class="h-5 w-5" />
-      </NuxtLink>
-      <button
-        type="button"
-        title="菜单"
-        aria-label="打开菜单"
-        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur"
-        @click="mobileNavOpen = true"
-      >
-        <UIcon name="i-icon-park-solid-more-four" class="h-5 w-5" />
-      </button>
-    </div>
+    <Teleport to="body">
+      <div v-if="isMobileUserAgent" class="fixed top-3 right-3 z-50 flex items-center gap-2">
+        <NuxtLink
+          v-if="global.userinfo.token && $route.path === '/'"
+          to="/new"
+          title="发表"
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white shadow-sm backdrop-blur"
+        >
+          <UIcon name="i-carbon-camera" class="h-5 w-5" />
+        </NuxtLink>
+        <NuxtLink
+          v-if="!sysConfig.hideMobileLogin && !global.userinfo.token && $route.path === '/'"
+          to="/user/login"
+          title="登录"
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-black/35 text-white shadow-sm backdrop-blur"
+        >
+          <UIcon name="i-carbon-login" class="h-5 w-5" />
+        </NuxtLink>
+        <button
+          type="button"
+          title="菜单"
+          aria-label="打开菜单"
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white shadow-sm backdrop-blur"
+          @click="mobileNavOpen = true"
+        >
+          <UIcon name="i-icon-park-solid-more-four" class="h-5 w-5" />
+        </button>
+      </div>
+    </Teleport>
 
     <img
       :class="sysConfig.coverDescription ? 'cursor-pointer' : ''"

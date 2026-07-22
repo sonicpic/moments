@@ -2,7 +2,7 @@
   <div
     :class="isMobileUserAgent
       ? 'min-h-dvh w-full overflow-x-clip bg-white dark:bg-neutral-900 mx-auto'
-      : 'min-h-dvh w-full overflow-x-clip bg-white dark:bg-neutral-900 md:w-[567px] md:shadow-2xl mx-auto'"
+      : 'min-h-dvh w-full overflow-visible bg-white dark:bg-neutral-900 md:w-[567px] md:shadow-2xl mx-auto'"
   >
     <slot />
     <Footer />
