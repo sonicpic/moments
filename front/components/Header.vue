@@ -199,19 +199,33 @@
     <div class="absolute right-2 bottom-[-40px]">
       <div class="userinfo flex flex-col">
         <div class="flex flex-row items-center gap-4 justify-end">
-          <div
-            :class="!global.userinfo.token ? 'cursor-pointer select-none' : ''"
+          <button
+            type="button"
+            :title="sysConfig.enablePinnedMemoLink ? '打开置顶内容' : undefined"
+            :class="sysConfig.enablePinnedMemoLink ? 'cursor-pointer' : ''"
             class="username text-lg font-bold text-white"
-            @dblclick="openLogin"
+            @click="openPinnedMemo"
           >
             {{ props.user.nickname }}
-          </div>
-          <img
-            :src="props.user.avatarUrl"
-            class="avatar w-[70px] h-[70px] rounded-xl"
-          />
+          </button>
+          <button
+            type="button"
+            :title="sysConfig.enablePinnedMemoLink ? '打开置顶内容' : undefined"
+            :class="sysConfig.enablePinnedMemoLink ? 'cursor-pointer' : ''"
+            class="shrink-0"
+            @click="openPinnedMemo"
+          >
+            <img
+              :src="props.user.avatarUrl"
+              class="avatar w-[70px] h-[70px] rounded-xl"
+            />
+          </button>
         </div>
-        <div class="slogon text-gray truncate w-full text-end text-xs mt-2">
+        <div
+          :class="!global.userinfo.token ? 'cursor-pointer select-none' : ''"
+          class="slogon text-gray truncate w-full text-end text-xs mt-2"
+          @dblclick="openLogin"
+        >
           {{ props.user.slogan }}
         </div>
       </div>
@@ -243,6 +257,27 @@ const logout = async () => {
 const openLogin = async () => {
   if (!global.value.userinfo.token) {
     await navigateTo("/user/login");
+  }
+};
+
+const openPinnedMemo = async () => {
+  if (!sysConfig.value.enablePinnedMemoLink) {
+    return;
+  }
+  try {
+    const result = await useMyFetch<{ list: Array<{ id: number; pinned: boolean; externalUrl?: string }> }>("/memo/list", { page: 1, size: 10 });
+    const pinnedMemo = result?.list?.find((memo) => memo.pinned);
+    if (!pinnedMemo) {
+      toast.error("暂未设置置顶朋友圈");
+      return;
+    }
+    if (pinnedMemo.externalUrl) {
+      window.location.assign(pinnedMemo.externalUrl);
+      return;
+    }
+    await navigateTo(`/memo/${pinnedMemo.id}`);
+  } catch {
+    toast.error("暂时无法打开置顶内容");
   }
 };
 

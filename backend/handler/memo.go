@@ -101,6 +101,28 @@ func hideMemoInteractions(memo *db.Memo) {
 	memo.Liked = false
 }
 
+func externalAccessStartAt(sysConfigVO vo.FullSysConfigVO) *time.Time {
+	value := strings.TrimSpace(sysConfigVO.ExternalAccessStartAt)
+	if value == "" {
+		return nil
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04", "2006-01-02 15:04:05", "2006-01-02"} {
+		var (
+			parsed time.Time
+			err    error
+		)
+		if layout == time.RFC3339 {
+			parsed, err = time.Parse(layout, value)
+		} else {
+			parsed, err = time.ParseInLocation(layout, value, time.Local)
+		}
+		if err == nil {
+			return &parsed
+		}
+	}
+	return nil
+}
+
 type memoListResp struct {
 	List    []db.Memo `json:"list,omitempty"`    //memo列表
 	HasNext bool      `json:"hasNext,omitempty"` //是否有下一页
@@ -192,6 +214,7 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 	if !sysConfigVO.EnableExternalAccess && (currentUser == nil || currentUser.Id != 1) {
 		return SuccessResp(c, memoListResp{List: []db.Memo{}, Total: 0})
 	}
+	visibleStartAt := externalAccessStartAt(sysConfigVO)
 	offset := (req.Page - 1) * req.Size
 
 	tx := m.base.db.Model(&db.Memo{}).Preload("User", func(x *gorm.DB) *gorm.DB {
@@ -236,6 +259,9 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 	}
 	if req.UserId != nil {
 		tx = tx.Where("userId = ?", req.UserId)
+	}
+	if (currentUser == nil || currentUser.Id != 1) && visibleStartAt != nil {
+		tx = tx.Where("createdAt >= ?", *visibleStartAt)
 	}
 	tx.Session(&gorm.Session{}).Order("pinned desc, createdAt desc").Limit(req.Size).Offset(offset).Find(&list)
 	tx.Session(&gorm.Session{}).Count(&total)
@@ -544,6 +570,10 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 
 	if *memo.ShowType != 1 && (currentUser == nil || currentUser.Id != memo.UserId) {
 		return FailRespWithMsg(c, Fail, "暂无权限查看")
+	}
+	visibleStartAt := externalAccessStartAt(sysConfigVO)
+	if (currentUser == nil || currentUser.Id != 1) && visibleStartAt != nil && memo.CreatedAt.Before(*visibleStartAt) {
+		return FailRespWithMsg(c, Fail, "该朋友圈暂不对外公开")
 	}
 
 	if shouldShowInteractions(sysConfigVO, currentUser) {

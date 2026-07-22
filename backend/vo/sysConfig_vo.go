@@ -32,6 +32,7 @@ type SysConfigVO struct {
 	EnableComment          bool                `json:"enableComment"`                  //是否启用评论
 	ShowVisitorInteractions bool               `json:"showVisitorInteractions"`        //普通访客是否显示点赞和评论
 	EnableExternalAccess   bool                `json:"enableExternalAccess"`           //是否允许非管理员访问朋友圈
+	ExternalAccessStartAt  string              `json:"externalAccessStartAt,omitempty"` //外部可见朋友圈的起始时间
 	MaxCommentLength       int                 `json:"maxCommentLength,omitempty"`     //发言最大长度
 	MemoMaxHeight          int                 `json:"memoMaxHeight,omitempty"`        //单个memo的最大高度,单位px
 	CommentOrder           string              `json:"commentOrder,omitempty"`         //评论展示的顺序,asc:顺序,desc:逆序
@@ -44,6 +45,7 @@ type SysConfigVO struct {
 	HideFriendLink         bool                `json:"hideFriendLink"`                 //隐藏友链入口
 	HideColorMode          bool                `json:"hideColorMode"`                  //隐藏深浅模式入口
 	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏所有平台的登录入口（保留字段名以兼容现有配置）
+	EnablePinnedMemoLink   bool                `json:"enablePinnedMemoLink"`           //点击头像和昵称时跳转置顶内容
 	CoverDescription       string              `json:"coverDescription,omitempty"`     //背景图简介
 	Version                string              `json:"version,omitempty"`
 	CommitId               string              `json:"commitId,omitempty"`
@@ -67,6 +69,7 @@ type FullSysConfigVO struct {
 	EnableComment          bool                `json:"enableComment"`                  //是否启用评论
 	ShowVisitorInteractions bool               `json:"showVisitorInteractions"`        //普通访客是否显示点赞和评论
 	EnableExternalAccess   bool                `json:"enableExternalAccess"`           //是否允许非管理员访问朋友圈
+	ExternalAccessStartAt  string              `json:"externalAccessStartAt,omitempty"` //外部可见朋友圈的起始时间
 	MaxCommentLength       int                 `json:"maxCommentLength,omitempty"`     //发言最大长度
 	MemoMaxHeight          int                 `json:"memoMaxHeight,omitempty"`        //单个memo的最大高度,单位px
 	CommentOrder           string              `json:"commentOrder,omitempty"`         //评论展示的顺序,asc:顺序,desc:逆序
@@ -79,6 +82,7 @@ type FullSysConfigVO struct {
 	HideFriendLink         bool                `json:"hideFriendLink"`                 //隐藏友链入口
 	HideColorMode          bool                `json:"hideColorMode"`                  //隐藏深浅模式入口
 	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏所有平台的登录入口（保留字段名以兼容现有配置）
+	EnablePinnedMemoLink   bool                `json:"enablePinnedMemoLink"`           //点击头像和昵称时跳转置顶内容
 	CoverDescription       string              `json:"coverDescription,omitempty"`     //背景图简介
 	EnableEmail            bool                `json:"enableEmail,omitempty"`          //是否启用邮箱
 	SmtpHost               string              `json:"smtpHost,omitempty"`             //smtp host

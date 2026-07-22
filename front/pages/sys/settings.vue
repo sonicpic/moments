@@ -34,6 +34,9 @@
 
       <SettingsCard title="内容规则" description="控制内容加载、评论与时间显示。">
         <SettingToggle v-model="state.enableExternalAccess" label="允许外部访问朋友圈" />
+        <UFormGroup v-if="state.enableExternalAccess" label="外部可见起始时间" name="externalAccessStartAt" help="留空表示公开全部朋友圈；填写后仅该时间及之后的朋友圈对外可见。管理员不受此限制。">
+          <div class="flex gap-2"><UInput v-model="state.externalAccessStartAt" type="datetime-local" class="flex-1" /><UButton v-if="state.externalAccessStartAt" color="gray" variant="soft" @click="state.externalAccessStartAt = ''">清空</UButton></div>
+        </UFormGroup>
         <SettingToggle v-model="state.enableAutoLoadNextPage" label="首页自动加载下一页" />
         <SettingToggle v-model="state.enableComment" label="启用评论" />
         <SettingToggle v-model="state.showVisitorInteractions" label="向普通访客显示点赞与评论" />
@@ -46,10 +49,11 @@
     </section>
 
     <section v-show="activeTab === 'appearance'" class="space-y-4">
-      <SettingsCard title="访客按钮" description="登录按钮隐藏后，未登录访客可双击首页昵称打开登录页。">
+      <SettingsCard title="访客按钮" description="登录按钮隐藏后，未登录访客可双击首页签名区域打开登录页。">
         <SettingToggle v-model="state.hideFriendLink" label="隐藏友情链接按钮" />
         <SettingToggle v-model="state.hideColorMode" label="隐藏深浅模式按钮" />
         <SettingToggle v-model="state.hideMobileLogin" label="隐藏所有设备的登录按钮" />
+        <SettingToggle v-model="state.enablePinnedMemoLink" label="点击头像和昵称跳转置顶链接" />
       </SettingsCard>
 
       <SettingsCard title="自定义扩展" description="样式和脚本会作用于整个站点，请仅粘贴可信内容。">
@@ -158,6 +162,7 @@ const state = reactive({
   enableComment: true,
   showVisitorInteractions: true,
   enableExternalAccess: true,
+  externalAccessStartAt: "",
   enableRegister: true,
   enableBackgroundMusic: false,
   backgroundMusicUrl: "",
@@ -166,6 +171,7 @@ const state = reactive({
   hideFriendLink: false,
   hideColorMode: false,
   hideMobileLogin: false,
+  enablePinnedMemoLink: false,
   coverDescription: "",
   maxCommentLength: 120,
   memoMaxHeight: 300,

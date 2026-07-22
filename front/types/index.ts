@@ -86,12 +86,14 @@ export type SysConfigVO = {
     hideFriendLink: boolean
     hideColorMode: boolean
     hideMobileLogin: boolean
+    enablePinnedMemoLink: boolean
     coverDescription: string
     enableGoogleRecaptcha: boolean,
     googleSiteKey: string,
     enableComment: boolean,
     showVisitorInteractions: boolean,
     enableExternalAccess: boolean,
+    externalAccessStartAt: string,
     maxCommentLength: number,
     memoMaxHeight: number,
     commentOrder: 'desc' | 'asc',

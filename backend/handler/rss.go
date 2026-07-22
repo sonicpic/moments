@@ -66,6 +66,7 @@ func (r RssHandler) generateRss(host string) (string, error) {
 	if !sysConfigVO.EnableExternalAccess {
 		return "", errExternalAccessDisabled
 	}
+	visibleStartAt := externalAccessStartAt(sysConfigVO)
 
 	// 获取管理员信息
 	r.base.db.First(&user, "Username = ?", "admin")
@@ -79,6 +80,9 @@ func (r RssHandler) generateRss(host string) (string, error) {
 	tx := r.base.db.Preload("User", func(x *gorm.DB) *gorm.DB {
 		return x.Select("username", "nickname", "id", "email")
 	}).Where("showType = 1")
+	if visibleStartAt != nil {
+		tx = tx.Where("createdAt >= ?", *visibleStartAt)
+	}
 	tx.Order("createdAt desc").Limit(15).Find(&memos)
 
 	for i := range memos {
