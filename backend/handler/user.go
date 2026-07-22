@@ -141,7 +141,9 @@ func (u UserHandler) Reg(c echo.Context) error {
 func (u UserHandler) ProfileForUser(c echo.Context) error {
 	username := c.Param("username")
 	var user db.User
-	u.base.db.Select("username", "nickname", "slogan", "id", "avatarUrl", "coverUrl", "email").Find(&user, "username = ?", username)
+	// This endpoint is public. Never include email or other account fields in
+	// the response, even when the requested username exists.
+	u.base.db.Select("username", "nickname", "slogan", "id", "avatarUrl", "coverUrl").Find(&user, "username = ?", username)
 	return SuccessResp(c, user)
 }
 
@@ -159,7 +161,10 @@ func (u UserHandler) Profile(c echo.Context) error {
 	context := c.(CustomContext)
 	currentUser := context.CurrentUser()
 	if currentUser == nil {
-		u.base.db.Select("username", "nickname", "slogan", "id", "avatarUrl", "coverUrl", "email").First(&currentUser)
+		// Unauthenticated visitors only receive the public administrator profile.
+		// Email remains available to a signed-in user through the authenticated
+		// branch above, which is used by the user centre.
+		u.base.db.Select("username", "nickname", "slogan", "id", "avatarUrl", "coverUrl").First(&currentUser)
 	}
 
 	return SuccessResp(c, currentUser)
