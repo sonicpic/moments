@@ -8,6 +8,13 @@
     <Footer />
   </div>
 
+  <BackgroundMusic
+    :enabled="sysConfigVO.enableBackgroundMusic"
+    :playlist="sysConfigVO.backgroundMusicList"
+    :src="sysConfigVO.backgroundMusicUrl"
+    :title="sysConfigVO.backgroundMusicTitle"
+  />
+
   <div
     title="到顶部"
     v-if="!isMobileUserAgent && y > 200"
