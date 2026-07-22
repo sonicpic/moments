@@ -15,7 +15,7 @@
      <span  class="text-[#576b95] text-nowrap">{{props.comment.replyTo}}</span>
    </template>
     <span class="mx-0.5">:</span>
-    <span class="inline break-all cursor-pointer" @click="toggle">{{ props.comment.content }}</span>
+    <span :class="canComment ? 'cursor-pointer' : ''" class="inline break-all" @click="toggle">{{ props.comment.content }}</span>
     <span class="text-xs text-gray-400 ml-2 hidden sm:inline-block">{{$dayjs(props.comment.createdAt).fromNow()}}</span>
     <span class="text-xs text-gray-400 ml-2 inline-flex" v-if="(global.userinfo.id === props.memoUserId || global.userinfo.id === 1)">
       <Confirm @ok="removeComment">
@@ -24,19 +24,22 @@
     </span>
     
   </div>
-  <CommentBox :memo-id="props.memoId" :reply-to="props.comment.username" :comment-id="props.comment.id" :reply-email="props.comment.email"/>
+  <CommentBox v-if="canComment" :memo-id="props.memoId" :reply-to="props.comment.username" :comment-id="props.comment.id" :reply-email="props.comment.email"/>
 </template>
 
 <script setup lang="ts">
-import type {CommentVO, UserVO} from "~/types";
+import type {CommentVO, SysConfigVO, UserVO} from "~/types";
 import CommentBox from "~/components/CommentBox.vue";
 import {toast} from "vue-sonner";
 import {memoChangedEvent} from "~/event";
 import {useGlobalState} from "~/store";
 
 const global = useGlobalState()
+const sysConfig = useState<SysConfigVO>('sysConfig')
 const currentCommentBox = useState('currentCommentBox')
+const canComment = computed(() => sysConfig.value?.enableComment !== false || global.value?.userinfo?.id === 1)
 const toggle = () => {
+  if (!canComment.value) return
   const value = props.memoId + '#' + props.comment.id
   if (currentCommentBox.value === value) {
     currentCommentBox.value = ''

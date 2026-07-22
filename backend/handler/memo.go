@@ -90,15 +90,37 @@ func (m MemoHandler) applyMemoLikeState(visitorID string, memos []db.Memo) {
 	}
 }
 
-func shouldShowInteractions(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
-	return sysConfigVO.ShowVisitorInteractions || (currentUser != nil && currentUser.Id == 1)
+func isAdmin(currentUser *db.User) bool {
+	return currentUser != nil && currentUser.Id == 1
 }
 
-func hideMemoInteractions(memo *db.Memo) {
-	memo.FavCount = 0
-	memo.CommentCount = 0
-	memo.Comments = nil
-	memo.Liked = false
+func canLike(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
+	return sysConfigVO.EnableLike || isAdmin(currentUser)
+}
+
+func canViewLikeCount(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
+	return sysConfigVO.ShowVisitorLikeCount || isAdmin(currentUser)
+}
+
+func canComment(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
+	return sysConfigVO.EnableComment || isAdmin(currentUser)
+}
+
+func canViewComments(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
+	return sysConfigVO.ShowVisitorComments || isAdmin(currentUser)
+}
+
+func filterMemoInteractions(memo *db.Memo, allowLike, showLikeCount, showComments bool) {
+	if !showLikeCount {
+		memo.FavCount = 0
+	}
+	if !showComments {
+		memo.CommentCount = 0
+		memo.Comments = nil
+	}
+	if !allowLike {
+		memo.Liked = false
+	}
 }
 
 func externalAccessStartAt(sysConfigVO vo.FullSysConfigVO) *time.Time {
@@ -204,13 +226,10 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 
 	m.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
-	if !strings.Contains(sysConfig.Content, `"showVisitorInteractions"`) {
-		sysConfigVO.ShowVisitorInteractions = true
-	}
-	if !strings.Contains(sysConfig.Content, `"enableExternalAccess"`) {
-		sysConfigVO.EnableExternalAccess = true
-	}
-	showInteractions := shouldShowInteractions(sysConfigVO, currentUser)
+	applyFullSysConfigDefaults(sysConfig.Content, &sysConfigVO)
+	allowLike := canLike(sysConfigVO, currentUser)
+	showLikeCount := canViewLikeCount(sysConfigVO, currentUser)
+	showComments := canViewComments(sysConfigVO, currentUser)
 	if !sysConfigVO.EnableExternalAccess && (currentUser == nil || currentUser.Id != 1) {
 		return SuccessResp(c, memoListResp{List: []db.Memo{}, Total: 0})
 	}
@@ -266,22 +285,21 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 	tx.Session(&gorm.Session{}).Order("pinned desc, createdAt desc").Limit(req.Size).Offset(offset).Find(&list)
 	tx.Session(&gorm.Session{}).Count(&total)
 
-	if showInteractions {
+	if showComments {
 		for i, memo := range list {
 			var comments []db.Comment
 			m.base.db.Where("memoId = ?", memo.Id).Order(fmt.Sprintf("createdAt %s", sysConfigVO.CommentOrder)).Limit(5).Find(&comments)
 			list[i].Comments = comments
 		}
-	} else {
-		for i := range list {
-			hideMemoInteractions(&list[i])
-		}
+	}
+	for i := range list {
+		filterMemoInteractions(&list[i], allowLike, showLikeCount, showComments)
 	}
 
 	for i := range list {
 		m.handleImgConfigs(&sysConfigVO, &list[i])
 	}
-	if showInteractions {
+	if allowLike {
 		m.applyMemoLikeState(m.likeVisitorID(c, currentUser), list)
 	}
 
@@ -353,6 +371,11 @@ func (m MemoHandler) LikeMemo(c echo.Context) error {
 
 	m.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
+	applyFullSysConfigDefaults(sysConfig.Content, &sysConfigVO)
+	context := c.(CustomContext)
+	if !canLike(sysConfigVO, context.CurrentUser()) {
+		return FailRespWithMsg(c, Fail, "点赞未开启")
+	}
 
 	if sysConfigVO.EnableGoogleRecaptcha {
 		token = c.QueryParam("token")
@@ -363,7 +386,6 @@ func (m MemoHandler) LikeMemo(c echo.Context) error {
 			return FailRespWithMsg(c, Fail, err.Error())
 		}
 	}
-	context := c.(CustomContext)
 	visitorID := m.likeVisitorID(c, context.CurrentUser())
 	result := likeMemoResp{}
 
@@ -545,12 +567,7 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 
 	m.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
-	if !strings.Contains(sysConfig.Content, `"showVisitorInteractions"`) {
-		sysConfigVO.ShowVisitorInteractions = true
-	}
-	if !strings.Contains(sysConfig.Content, `"enableExternalAccess"`) {
-		sysConfigVO.EnableExternalAccess = true
-	}
+	applyFullSysConfigDefaults(sysConfig.Content, &sysConfigVO)
 	if !sysConfigVO.EnableExternalAccess && (currentUser == nil || currentUser.Id != 1) {
 		return FailRespWithMsg(c, Fail, "朋友圈仅管理员可见")
 	}
@@ -576,7 +593,8 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 		return FailRespWithMsg(c, Fail, "该朋友圈暂不对外公开")
 	}
 
-	if shouldShowInteractions(sysConfigVO, currentUser) {
+	showComments := canViewComments(sysConfigVO, currentUser)
+	if showComments {
 		var comments []db.Comment
 		tx := m.base.db.Where("memoId = ?", memo.Id).Order("createdAt DESC")
 		if latest != "" {
@@ -585,9 +603,8 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 		tx.Find(&comments)
 
 		memo.Comments = comments
-	} else {
-		hideMemoInteractions(&memo)
 	}
+	filterMemoInteractions(&memo, canLike(sysConfigVO, currentUser), canViewLikeCount(sysConfigVO, currentUser), showComments)
 
 	m.handleImgConfigs(&sysConfigVO, &memo)
 

@@ -134,24 +134,26 @@ func (c CommentHandler) AddComment(ctx echo.Context) error {
 	}
 	c.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
+	applyFullSysConfigDefaults(sysConfig.Content, &sysConfigVO)
 
-	if !sysConfigVO.EnableComment {
+	currentUser := (*db.User)(nil)
+	if context, ok := ctx.(CustomContext); ok {
+		currentUser = context.CurrentUser()
+	}
+	if !canComment(sysConfigVO, currentUser) {
 		return FailRespWithMsg(ctx, Fail, "评论未开启")
 	}
 
 	if err := checkGoogleRecaptcha(c.base.log, sysConfigVO, req.Token); err != nil {
 		return FailRespWithMsg(ctx, Fail, err.Error())
 	}
-	if context, ok := ctx.(CustomContext); ok {
-		currentUser := context.CurrentUser()
-		if currentUser == nil {
-			comment.Username = req.Username
-			comment.Email = req.Email
-		} else {
-			comment.Username = currentUser.Nickname
-			comment.Email = currentUser.Email
-			comment.Author = fmt.Sprintf("%d", currentUser.Id)
-		}
+	if currentUser != nil {
+		comment.Username = currentUser.Nickname
+		comment.Email = currentUser.Email
+		comment.Author = fmt.Sprintf("%d", currentUser.Id)
+	} else {
+		comment.Username = req.Username
+		comment.Email = req.Email
 	}
 
 	if comment.Username == "" {

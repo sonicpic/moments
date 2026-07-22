@@ -49,6 +49,56 @@ func TestExternalAccessStartAt(t *testing.T) {
 	}
 }
 
+func TestInteractionDefaults(t *testing.T) {
+	tests := []struct {
+		name                                                             string
+		content                                                          string
+		legacyVisible, enableLike, showLike, enableComment, showComments bool
+		want                                                             [4]bool
+	}{
+		{
+			name:          "old configuration keeps interactions visible",
+			content:       `{"enableComment":true}`,
+			enableComment: true,
+			want:          [4]bool{true, true, true, true},
+		},
+		{
+			name:          "old hidden interaction switch hides visitor counts and comments",
+			content:       `{"showVisitorInteractions":false,"enableComment":true}`,
+			enableComment: true,
+			want:          [4]bool{false, false, true, false},
+		},
+		{
+			name:          "disabling likes always disables visible like count",
+			content:       `{"enableLike":false,"showVisitorLikeCount":true,"enableComment":true,"showVisitorComments":true}`,
+			enableComment: true,
+			want:          [4]bool{false, false, true, true},
+		},
+		{
+			name:    "disabling comments always disables visible comments",
+			content: `{"enableLike":true,"showVisitorLikeCount":true,"enableComment":false,"showVisitorComments":true}`,
+			want:    [4]bool{true, true, false, false},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			enableLike, showLike, enableComment, showComments := interactionDefaults(
+				tt.content,
+				tt.legacyVisible,
+				tt.enableLike,
+				tt.showLike,
+				tt.enableComment,
+				tt.showComments,
+			)
+			got := [4]bool{enableLike, showLike, enableComment, showComments}
+			if got != tt.want {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
+	}
+}
+
 func timePtr(value time.Time) *time.Time {
 	return &value
 }

@@ -203,7 +203,7 @@
         <div class="flex flex-row items-center gap-4 justify-end">
           <button
             type="button"
-            :title="sysConfig.enablePinnedMemoLink ? '打开置顶内容' : undefined"
+            :title="sysConfig.enablePinnedMemoLink ? '打开设置的链接' : undefined"
             :class="sysConfig.enablePinnedMemoLink ? 'cursor-pointer' : ''"
             class="username text-lg font-bold text-white"
             @click="openPinnedMemo"
@@ -212,7 +212,7 @@
           </button>
           <button
             type="button"
-            :title="sysConfig.enablePinnedMemoLink ? '打开置顶内容' : undefined"
+            :title="sysConfig.enablePinnedMemoLink ? '打开设置的链接' : undefined"
             :class="sysConfig.enablePinnedMemoLink ? 'cursor-pointer' : ''"
             class="shrink-0"
             @click="openPinnedMemo"
@@ -264,6 +264,11 @@ const openLogin = async () => {
 
 const openPinnedMemo = async () => {
   if (!sysConfig.value.enablePinnedMemoLink) {
+    return;
+  }
+  const profileLinkURL = sysConfig.value.profileLinkUrl?.trim();
+  if (profileLinkURL) {
+    window.location.assign(profileLinkURL);
     return;
   }
   try {

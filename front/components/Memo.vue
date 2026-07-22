@@ -154,7 +154,7 @@
           >
             <div class="flex max-w-[calc(100vw-64px)] flex-row flex-wrap justify-end gap-2">
               <div
-                v-if="canViewInteractions"
+                v-if="canLike"
                 class="flex flex-row gap-1 cursor-pointer items-center px-4"
                 @click="likeMemo(item.id)"
               >
@@ -164,7 +164,7 @@
                 />
                 <div>赞</div>
               </div>
-              <template v-if="canViewInteractions && sysConfig.enableComment">
+              <template v-if="canComment">
                 <span class="bg-[#6b7280] h-[20px] w-[1px]"></span>
                 <div
                   class="flex flex-row gap-1 cursor-pointer items-center px-4"
@@ -267,11 +267,11 @@
         </div>
 
         <div
-          v-if="canViewInteractions && (item.favCount > 0 || sysConfig.enableComment)"
+          v-if="(canViewLikeCount && item.favCount > 0) || canComment || canViewComments"
           class="rounded bottom-shadow bg-[#f7f7f7] dark:bg-[#202020] flex flex-col gap-1"
         >
           <div
-            v-if="item.favCount > 0"
+            v-if="canViewLikeCount && item.favCount > 0"
             class="flex flex-row py-2 px-4 gap-2 items-center text-sm"
           >
             <UIcon name="i-carbon-favorite" class="text-red-500" />
@@ -279,9 +279,10 @@
               <span class="mx-1">{{ item.favCount }}位访客</span>
             </div>
           </div>
-          <div class="flex flex-col gap-1" v-if="sysConfig.enableComment">
-            <CommentBox :comment-id="0" :memo-id="item.id" />
+          <div class="flex flex-col gap-1" v-if="canComment || canViewComments">
+            <CommentBox v-if="canComment" :comment-id="0" :memo-id="item.id" />
             <div
+              v-if="canViewComments"
               class="space-y-1"
               :class="[item.comments && item.comments.length > 0 ? 'py-2' : '']"
             >
@@ -345,9 +346,10 @@ const item = computed(() => {
 
 const global = useGlobalState();
 const isAdmin = computed(() => global.value?.userinfo?.id === 1);
-const canViewInteractions = computed(
-  () => sysConfig.value?.showVisitorInteractions !== false || isAdmin.value,
-);
+const canLike = computed(() => sysConfig.value?.enableLike !== false || isAdmin.value);
+const canViewLikeCount = computed(() => sysConfig.value?.showVisitorLikeCount !== false || isAdmin.value);
+const canComment = computed(() => sysConfig.value?.enableComment !== false || isAdmin.value);
+const canViewComments = computed(() => sysConfig.value?.showVisitorComments !== false || isAdmin.value);
 
 const moreToolbar = ref(false);
 
@@ -373,6 +375,7 @@ const tags = computed(() => {
 });
 
 const doComment = () => {
+  if (!canComment.value) return;
   const value = item.value.id + "#0";
   if (currentCommentBox.value === value) {
     currentCommentBox.value = "";
@@ -429,6 +432,7 @@ const doLike = async (id: number, token: string = "") => {
 };
 
 const likeMemo = async (id: number) => {
+  if (!canLike.value) return;
   showToolbar.value = false;
 
   if (sysConfig.value.enableGoogleRecaptcha) {

@@ -16,6 +16,62 @@ type SysConfigHandler struct {
 	base BaseHandler
 }
 
+func hasConfigField(content, field string) bool {
+	return strings.Contains(content, `"`+field+`"`)
+}
+
+// interactionDefaults keeps existing installations on their previous behaviour
+// until the new, separate interaction switches are explicitly saved.
+func interactionDefaults(content string, legacyVisible, enableLike, showLikeCount, enableComment, showComments bool) (bool, bool, bool, bool) {
+	if !hasConfigField(content, "showVisitorInteractions") {
+		legacyVisible = true
+	}
+	if !hasConfigField(content, "enableLike") {
+		enableLike = legacyVisible
+	}
+	if !hasConfigField(content, "showVisitorLikeCount") {
+		showLikeCount = enableLike && legacyVisible
+	}
+	if !hasConfigField(content, "showVisitorComments") {
+		showComments = enableComment && legacyVisible
+	}
+	if !enableLike {
+		showLikeCount = false
+	}
+	if !enableComment {
+		showComments = false
+	}
+	return enableLike, showLikeCount, enableComment, showComments
+}
+
+func applySysConfigDefaults(content string, result *vo.SysConfigVO) {
+	result.EnableLike, result.ShowVisitorLikeCount, result.EnableComment, result.ShowVisitorComments = interactionDefaults(
+		content,
+		result.ShowVisitorInteractions,
+		result.EnableLike,
+		result.ShowVisitorLikeCount,
+		result.EnableComment,
+		result.ShowVisitorComments,
+	)
+	if !hasConfigField(content, "enableExternalAccess") {
+		result.EnableExternalAccess = true
+	}
+}
+
+func applyFullSysConfigDefaults(content string, result *vo.FullSysConfigVO) {
+	result.EnableLike, result.ShowVisitorLikeCount, result.EnableComment, result.ShowVisitorComments = interactionDefaults(
+		content,
+		result.ShowVisitorInteractions,
+		result.EnableLike,
+		result.ShowVisitorLikeCount,
+		result.EnableComment,
+		result.ShowVisitorComments,
+	)
+	if !hasConfigField(content, "enableExternalAccess") {
+		result.EnableExternalAccess = true
+	}
+}
+
 func NewSysConfigHandler(injector do.Injector) *SysConfigHandler {
 	return &SysConfigHandler{do.MustInvoke[BaseHandler](injector)}
 }
@@ -42,15 +98,7 @@ func (s SysConfigHandler) GetConfig(c echo.Context) error {
 	if err != nil {
 		return FailRespWithMsg(c, Fail, "读取系统配置异常")
 	}
-	// Existing installations predate this setting. Keep their established
-	// behaviour (interactions visible) until an administrator explicitly saves
-	// a choice in the settings page.
-	if !strings.Contains(config.Content, `"showVisitorInteractions"`) {
-		result.ShowVisitorInteractions = true
-	}
-	if !strings.Contains(config.Content, `"enableExternalAccess"`) {
-		result.EnableExternalAccess = true
-	}
+	applySysConfigDefaults(config.Content, &result)
 	result.Version = s.base.cfg.Version
 	result.CommitId = s.base.cfg.CommitId
 
@@ -89,12 +137,7 @@ func (s SysConfigHandler) GetFullConfig(c echo.Context) error {
 	if err != nil {
 		return FailRespWithMsg(c, Fail, "读取系统配置异常")
 	}
-	if !strings.Contains(config.Content, `"showVisitorInteractions"`) {
-		result.ShowVisitorInteractions = true
-	}
-	if !strings.Contains(config.Content, `"enableExternalAccess"`) {
-		result.EnableExternalAccess = true
-	}
+	applyFullSysConfigDefaults(config.Content, &result)
 	result.Version = s.base.cfg.Version
 	result.CommitId = s.base.cfg.CommitId
 	return SuccessResp(c, result)
@@ -124,6 +167,15 @@ func (s SysConfigHandler) SaveConfig(c echo.Context) error {
 	if err := c.Bind(&result); err != nil {
 		s.base.log.Info().Msgf("保存配置错误,%s", err)
 		return FailResp(c, ParamError)
+	}
+	// A count or comment list without its corresponding interaction does not
+	// make sense for visitors. Enforce the dependency server-side as well as in
+	// the settings UI so manually crafted requests cannot leave an invalid state.
+	if !result.EnableLike {
+		result.ShowVisitorLikeCount = false
+	}
+	if !result.EnableComment {
+		result.ShowVisitorComments = false
 	}
 
 	data, err := json.Marshal(result)

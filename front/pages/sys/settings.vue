@@ -32,19 +32,26 @@
         <UFormGroup label="备案号" name="beiAnNo"><UInput v-model="state.beiAnNo" placeholder="没有可留空" /></UFormGroup>
       </SettingsCard>
 
-      <SettingsCard title="内容规则" description="控制内容加载、评论与时间显示。">
+      <SettingsCard title="内容规则" description="控制内容加载与时间显示。">
         <SettingToggle v-model="state.enableExternalAccess" label="允许外部访问朋友圈" />
         <UFormGroup v-if="state.enableExternalAccess" label="外部可见起始时间" name="externalAccessStartAt" help="留空表示公开全部朋友圈；填写后仅该时间及之后的朋友圈对外可见。管理员不受此限制。">
           <div class="flex gap-2"><UInput v-model="state.externalAccessStartAt" type="datetime-local" class="flex-1" /><UButton v-if="state.externalAccessStartAt" color="gray" variant="soft" @click="state.externalAccessStartAt = ''">清空</UButton></div>
         </UFormGroup>
         <SettingToggle v-model="state.enableAutoLoadNextPage" label="首页自动加载下一页" />
-        <SettingToggle v-model="state.enableComment" label="启用评论" />
-        <SettingToggle v-model="state.showVisitorInteractions" label="向普通访客显示点赞与评论" />
         <SettingToggle v-model="state.enableRegister" label="允许新用户注册" />
         <UFormGroup label="评论最大字数" name="maxCommentLength"><UInput v-model.number="state.maxCommentLength" type="number" /></UFormGroup>
         <UFormGroup label="发言最大高度（px，0 为不限制）" name="memoMaxHeight"><UInput v-model.number="state.memoMaxHeight" type="number" /></UFormGroup>
         <UFormGroup label="评论排序" name="commentOrder"><USelectMenu v-model="state.commentOrder" :options="commentOrders" value-attribute="value" option-attribute="label" /></UFormGroup>
         <UFormGroup label="日期格式" name="timeFormat"><USelectMenu v-model="state.timeFormat" :options="timeFormats" value-attribute="value" option-attribute="label" /></UFormGroup>
+      </SettingsCard>
+
+      <SettingsCard title="访客互动" description="管理员始终可查看互动；以下开关仅控制普通访客。">
+        <p class="px-1 text-sm font-medium text-neutral-700 dark:text-neutral-100">点赞</p>
+        <SettingToggle v-model="state.enableLike" label="允许用户点赞" />
+        <SettingToggle v-model="state.showVisitorLikeCount" :disabled="!state.enableLike" label="允许用户查看点赞数" />
+        <p class="px-1 pt-2 text-sm font-medium text-neutral-700 dark:text-neutral-100">评论</p>
+        <SettingToggle v-model="state.enableComment" label="允许用户评论" />
+        <SettingToggle v-model="state.showVisitorComments" :disabled="!state.enableComment" label="允许用户查看评论" />
       </SettingsCard>
     </section>
 
@@ -53,7 +60,10 @@
         <SettingToggle v-model="state.hideFriendLink" label="隐藏友情链接按钮" />
         <SettingToggle v-model="state.hideColorMode" label="隐藏深浅模式按钮" />
         <SettingToggle v-model="state.hideMobileLogin" label="隐藏所有设备的登录按钮" />
-        <SettingToggle v-model="state.enablePinnedMemoLink" label="点击头像和昵称跳转置顶链接" />
+        <SettingToggle v-model="state.enablePinnedMemoLink" label="启用头像和昵称跳转" />
+        <UFormGroup v-if="state.enablePinnedMemoLink" label="头像和昵称跳转链接" name="profileLinkUrl" help="填写完整网址后会直接跳转；留空则保持原有的置顶朋友圈跳转行为。">
+          <UInput v-model="state.profileLinkUrl" placeholder="https://example.com" type="url" />
+        </UFormGroup>
       </SettingsCard>
 
       <SettingsCard title="自定义扩展" description="样式和脚本会作用于整个站点，请仅粘贴可信内容。">
@@ -159,8 +169,10 @@ const state = reactive({
   googleSiteKey: "",
   googleSecretKey: "",
   enableAutoLoadNextPage: true,
+  enableLike: true,
+  showVisitorLikeCount: true,
   enableComment: true,
-  showVisitorInteractions: true,
+  showVisitorComments: true,
   enableExternalAccess: true,
   externalAccessStartAt: "",
   enableRegister: true,
@@ -172,6 +184,7 @@ const state = reactive({
   hideColorMode: false,
   hideMobileLogin: false,
   enablePinnedMemoLink: false,
+  profileLinkUrl: "",
   coverDescription: "",
   maxCommentLength: 120,
   memoMaxHeight: 300,
@@ -241,6 +254,14 @@ const queueSave = () => {
 };
 
 watch(state, queueSave, { deep: true });
+
+watch(() => state.enableLike, (enabled) => {
+  if (!enabled) state.showVisitorLikeCount = false;
+});
+
+watch(() => state.enableComment, (enabled) => {
+  if (!enabled) state.showVisitorComments = false;
+});
 
 const uploadFavicon = async (files: FileList) => {
   if (Array.from(files).some(file => !file.type.startsWith("image/"))) {
