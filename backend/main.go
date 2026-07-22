@@ -104,6 +104,7 @@ func main() {
 	migrateTo3(tx, myLogger)
 	migrateIframeVideoUrl(tx, myLogger)
 	migrateFriendLink(tx, myLogger)
+	handler.StartStorageDeletionWorker(injector)
 
 	e.HideBanner = true
 	err = e.Start(fmt.Sprintf(":%d", cfg.Port))

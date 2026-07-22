@@ -337,8 +337,22 @@ func (m MemoHandler) RemoveMemo(c echo.Context) error {
 	if currentUser.Id != memo.UserId && currentUser.Id != 1 {
 		return FailRespWithMsg(c, Fail, "没有权限")
 	}
-	if m.base.db.Delete(&memo).RowsAffected != 1 {
+	sysConfig, err := loadFullSysConfig(m.base.db)
+	if err != nil {
+		m.base.log.Error().Err(err).Msg("删除朋友圈时读取系统配置失败")
+		return FailRespWithMsg(c, Fail, "读取存储配置失败，未删除朋友圈")
+	}
+	taskIDs, err := deleteMemoRelationsAndQueueS3Cleanup(m.base.db, memo, sysConfig)
+	if err != nil {
+		m.base.log.Error().Err(err).Int32("memoId", memo.Id).Msg("删除朋友圈失败")
 		return FailRespWithMsg(c, Fail, "删除失败")
+	}
+
+	if pending := processStorageDeletionTasks(m.base.db, m.base.log, taskIDs); pending > 0 {
+		return SuccessResp(c, h{
+			"mediaCleanupPending": true,
+			"message":             storageDeletionPendingMessage(pending),
+		})
 	}
 
 	return SuccessResp(c, h{})
