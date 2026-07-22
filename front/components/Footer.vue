@@ -1,39 +1,30 @@
 <template>
-  <div class="footer p-4 flex justify-center items-center text-xs">
-    <div class="flex flex-col gap-1 items-center">
-      <NuxtLink
-        v-if="!starsLoadFailed"
-        to="https://github.com/kingwrcy/moments"
-        target="_blank"
-      >
-        <img
-          src="https://img.shields.io/github/stars/kingwrcy/moments"
-          class="h-6 inline-block mr-1"
-          alt="github"
-          @error="onStarsLoadFailed"
-        />
-      </NuxtLink>
+  <footer class="footer px-4 py-6 text-center text-xs leading-6 text-gray-400 dark:text-gray-500">
+    <p>
+      Powered by
       <a
-        v-if="sysConfig.beiAnNo"
-        class="my-2 text-gray-500"
-        href="https://beian.miit.gov.cn/"
+        class="transition hover:text-[#719832]"
+        href="https://github.com/kingwrcy/moments"
         target="_blank"
-      >
-        {{ sysConfig.beiAnNo }}
-      </a>
-    </div>
-  </div>
+        rel="noreferrer"
+      >Moments</a>
+    </p>
+    <p>Copyright © {{ year }} 大潘</p>
+    <a
+      v-if="sysConfig.beiAnNo"
+      class="transition hover:text-[#719832]"
+      href="https://beian.miit.gov.cn/"
+      target="_blank"
+      rel="noreferrer"
+    >
+      {{ sysConfig.beiAnNo }}
+    </a>
+  </footer>
 </template>
 
 <script setup lang="ts">
 import type { SysConfigVO } from "~/types";
 
 const sysConfig = useState<SysConfigVO>("sysConfig");
-
-const starsLoadFailed = ref<boolean>(false);
-const onStarsLoadFailed = () => {
-  starsLoadFailed.value = true;
-};
+const year = new Date().getFullYear();
 </script>
-
-<style scoped></style>
