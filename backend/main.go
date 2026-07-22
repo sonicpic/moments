@@ -74,6 +74,7 @@ func main() {
 
 	e := do.MustInvoke[*echo.Echo](injector)
 	e.Use(myMiddleware.Auth(injector))
+	e.Use(myMiddleware.Visitor(injector))
 
 	setupRouter(injector)
 

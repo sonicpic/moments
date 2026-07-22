@@ -79,7 +79,7 @@ func NewDB(injector do.Injector) (*gorm.DB, error) {
 	}
 
 	// 迁移 schema
-	err = db.AutoMigrate(&User{}, &Comment{}, &Memo{}, &MemoLike{}, &SysConfig{}, &Friend{})
+	err = db.AutoMigrate(&User{}, &Comment{}, &Memo{}, &MemoLike{}, &SysConfig{}, &Friend{}, &Visitor{})
 	if err != nil {
 		return nil, err
 	}
