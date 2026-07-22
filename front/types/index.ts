@@ -90,6 +90,8 @@ export type SysConfigVO = {
     enableGoogleRecaptcha: boolean,
     googleSiteKey: string,
     enableComment: boolean,
+    showVisitorInteractions: boolean,
+    enableExternalAccess: boolean,
     maxCommentLength: number,
     memoMaxHeight: number,
     commentOrder: 'desc' | 'asc',

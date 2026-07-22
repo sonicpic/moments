@@ -90,6 +90,17 @@ func (m MemoHandler) applyMemoLikeState(visitorID string, memos []db.Memo) {
 	}
 }
 
+func shouldShowInteractions(sysConfigVO vo.FullSysConfigVO, currentUser *db.User) bool {
+	return sysConfigVO.ShowVisitorInteractions || (currentUser != nil && currentUser.Id == 1)
+}
+
+func hideMemoInteractions(memo *db.Memo) {
+	memo.FavCount = 0
+	memo.CommentCount = 0
+	memo.Comments = nil
+	memo.Liked = false
+}
+
 type memoListResp struct {
 	List    []db.Memo `json:"list,omitempty"`    //memo列表
 	HasNext bool      `json:"hasNext,omitempty"` //是否有下一页
@@ -171,6 +182,16 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 
 	m.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
+	if !strings.Contains(sysConfig.Content, `"showVisitorInteractions"`) {
+		sysConfigVO.ShowVisitorInteractions = true
+	}
+	if !strings.Contains(sysConfig.Content, `"enableExternalAccess"`) {
+		sysConfigVO.EnableExternalAccess = true
+	}
+	showInteractions := shouldShowInteractions(sysConfigVO, currentUser)
+	if !sysConfigVO.EnableExternalAccess && (currentUser == nil || currentUser.Id != 1) {
+		return SuccessResp(c, memoListResp{List: []db.Memo{}, Total: 0})
+	}
 	offset := (req.Page - 1) * req.Size
 
 	tx := m.base.db.Model(&db.Memo{}).Preload("User", func(x *gorm.DB) *gorm.DB {
@@ -219,16 +240,24 @@ func (m MemoHandler) ListMemos(c echo.Context) error {
 	tx.Session(&gorm.Session{}).Order("pinned desc, createdAt desc").Limit(req.Size).Offset(offset).Find(&list)
 	tx.Session(&gorm.Session{}).Count(&total)
 
-	for i, memo := range list {
-		var comments []db.Comment
-		m.base.db.Where("memoId = ?", memo.Id).Order(fmt.Sprintf("createdAt %s", sysConfigVO.CommentOrder)).Limit(5).Find(&comments)
-		list[i].Comments = comments
+	if showInteractions {
+		for i, memo := range list {
+			var comments []db.Comment
+			m.base.db.Where("memoId = ?", memo.Id).Order(fmt.Sprintf("createdAt %s", sysConfigVO.CommentOrder)).Limit(5).Find(&comments)
+			list[i].Comments = comments
+		}
+	} else {
+		for i := range list {
+			hideMemoInteractions(&list[i])
+		}
 	}
 
 	for i := range list {
 		m.handleImgConfigs(&sysConfigVO, &list[i])
 	}
-	m.applyMemoLikeState(m.likeVisitorID(c, currentUser), list)
+	if showInteractions {
+		m.applyMemoLikeState(m.likeVisitorID(c, currentUser), list)
+	}
 
 	return SuccessResp(c, memoListResp{
 		List:    list,
@@ -423,8 +452,8 @@ func (m MemoHandler) SaveMemo(c echo.Context) error {
 		if err = m.base.db.First(&memo, req.ID).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 			return FailResp(c, ParamError)
 		}
-		if memo.UserId != currentUser.Id {
-			return FailResp(c, ParamError)
+		if memo.UserId != currentUser.Id && currentUser.Id != 1 {
+			return FailRespWithMsg(c, Fail, "没有权限")
 		}
 		memo.UpdatedAt = &now
 	} else {
@@ -489,6 +518,16 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 	currentUser := ctx.CurrentUser()
 
 	m.base.db.First(&sysConfig)
+	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
+	if !strings.Contains(sysConfig.Content, `"showVisitorInteractions"`) {
+		sysConfigVO.ShowVisitorInteractions = true
+	}
+	if !strings.Contains(sysConfig.Content, `"enableExternalAccess"`) {
+		sysConfigVO.EnableExternalAccess = true
+	}
+	if !sysConfigVO.EnableExternalAccess && (currentUser == nil || currentUser.Id != 1) {
+		return FailRespWithMsg(c, Fail, "朋友圈仅管理员可见")
+	}
 
 	id, err := strconv.Atoi(c.QueryParam("id"))
 	if err != nil {
@@ -507,14 +546,18 @@ func (m MemoHandler) GetMemo(c echo.Context) error {
 		return FailRespWithMsg(c, Fail, "暂无权限查看")
 	}
 
-	var comments []db.Comment
-	tx := m.base.db.Where("memoId = ?", memo.Id).Order("createdAt DESC")
-	if latest != "" {
-		tx.Limit(5)
-	}
-	tx.Find(&comments)
+	if shouldShowInteractions(sysConfigVO, currentUser) {
+		var comments []db.Comment
+		tx := m.base.db.Where("memoId = ?", memo.Id).Order("createdAt DESC")
+		if latest != "" {
+			tx.Limit(5)
+		}
+		tx.Find(&comments)
 
-	memo.Comments = comments
+		memo.Comments = comments
+	} else {
+		hideMemoInteractions(&memo)
+	}
 
 	m.handleImgConfigs(&sysConfigVO, &memo)
 

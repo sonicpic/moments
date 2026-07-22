@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,6 +25,8 @@ type RssHandler struct {
 	hc   http.Client
 }
 
+var errExternalAccessDisabled = errors.New("external access is disabled")
+
 func NewRssHandler(injector do.Injector) *RssHandler {
 	return &RssHandler{
 		base: do.MustInvoke[BaseHandler](injector),
@@ -35,6 +38,9 @@ func (r RssHandler) GetRss(c echo.Context) error {
 	frontendHost := fmt.Sprintf("%s://%s", c.Scheme(), c.Request().Host)
 	rss, err := r.generateRss(frontendHost)
 	if err != nil {
+		if errors.Is(err, errExternalAccessDisabled) {
+			return c.NoContent(http.StatusForbidden)
+		}
 		return FailRespWithMsg(c, Fail, "RSS生成失败")
 	}
 
@@ -54,6 +60,12 @@ func (r RssHandler) generateRss(host string) (string, error) {
 	// 获取系统设置
 	r.base.db.First(&sysConfig)
 	_ = json.Unmarshal([]byte(sysConfig.Content), &sysConfigVO)
+	if !strings.Contains(sysConfig.Content, `"enableExternalAccess"`) {
+		sysConfigVO.EnableExternalAccess = true
+	}
+	if !sysConfigVO.EnableExternalAccess {
+		return "", errExternalAccessDisabled
+	}
 
 	// 获取管理员信息
 	r.base.db.First(&user, "Username = ?", "admin")

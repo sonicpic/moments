@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/kingwrcy/moments/db"
 	"github.com/kingwrcy/moments/vo"
@@ -41,6 +42,15 @@ func (s SysConfigHandler) GetConfig(c echo.Context) error {
 	if err != nil {
 		return FailRespWithMsg(c, Fail, "读取系统配置异常")
 	}
+	// Existing installations predate this setting. Keep their established
+	// behaviour (interactions visible) until an administrator explicitly saves
+	// a choice in the settings page.
+	if !strings.Contains(config.Content, `"showVisitorInteractions"`) {
+		result.ShowVisitorInteractions = true
+	}
+	if !strings.Contains(config.Content, `"enableExternalAccess"`) {
+		result.EnableExternalAccess = true
+	}
 	result.Version = s.base.cfg.Version
 	result.CommitId = s.base.cfg.CommitId
 
@@ -78,6 +88,12 @@ func (s SysConfigHandler) GetFullConfig(c echo.Context) error {
 	err := json.Unmarshal([]byte(config.Content), &result)
 	if err != nil {
 		return FailRespWithMsg(c, Fail, "读取系统配置异常")
+	}
+	if !strings.Contains(config.Content, `"showVisitorInteractions"`) {
+		result.ShowVisitorInteractions = true
+	}
+	if !strings.Contains(config.Content, `"enableExternalAccess"`) {
+		result.EnableExternalAccess = true
 	}
 	result.Version = s.base.cfg.Version
 	result.CommitId = s.base.cfg.CommitId

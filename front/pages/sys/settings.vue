@@ -33,8 +33,10 @@
       </SettingsCard>
 
       <SettingsCard title="内容规则" description="控制内容加载、评论与时间显示。">
+        <SettingToggle v-model="state.enableExternalAccess" label="允许外部访问朋友圈" />
         <SettingToggle v-model="state.enableAutoLoadNextPage" label="首页自动加载下一页" />
         <SettingToggle v-model="state.enableComment" label="启用评论" />
+        <SettingToggle v-model="state.showVisitorInteractions" label="向普通访客显示点赞与评论" />
         <SettingToggle v-model="state.enableRegister" label="允许新用户注册" />
         <UFormGroup label="评论最大字数" name="maxCommentLength"><UInput v-model.number="state.maxCommentLength" type="number" /></UFormGroup>
         <UFormGroup label="发言最大高度（px，0 为不限制）" name="memoMaxHeight"><UInput v-model.number="state.memoMaxHeight" type="number" /></UFormGroup>
@@ -154,6 +156,8 @@ const state = reactive({
   googleSecretKey: "",
   enableAutoLoadNextPage: true,
   enableComment: true,
+  showVisitorInteractions: true,
+  enableExternalAccess: true,
   enableRegister: true,
   enableBackgroundMusic: false,
   backgroundMusicUrl: "",

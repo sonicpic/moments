@@ -13,7 +13,7 @@
         <span>详情</span>
       </NuxtLink>
       <UIcon
-        v-if="global.userinfo.id === 1 || global.userinfo.id === item.userId"
+        v-if="isAdmin"
         name="i-solar-menu-dots-bold"
         class="w-5 h-5 cursor-pointer"
         @click="moreToolbar = true"
@@ -151,8 +151,9 @@
             ref="toolbarRef"
             class="absolute top-[-8px] right-[32px] bg-[#4c4c4c] rounded text-white p-2"
           >
-            <div class="flex flex-row gap-2">
+            <div class="flex max-w-[calc(100vw-64px)] flex-row flex-wrap justify-end gap-2">
               <div
+                v-if="canViewInteractions"
                 class="flex flex-row gap-1 cursor-pointer items-center px-4"
                 @click="likeMemo(item.id)"
               >
@@ -162,7 +163,7 @@
                 />
                 <div>赞</div>
               </div>
-              <template v-if="sysConfig.enableComment">
+              <template v-if="canViewInteractions && sysConfig.enableComment">
                 <span class="bg-[#6b7280] h-[20px] w-[1px]"></span>
                 <div
                   class="flex flex-row gap-1 cursor-pointer items-center px-4"
@@ -182,6 +183,22 @@
                   <div>详情</div>
                 </div>
               </template>
+              <template v-if="isAdmin">
+                <span class="bg-[#6b7280] h-[20px] w-[1px]"></span>
+                <div
+                  class="flex flex-row gap-1 cursor-pointer items-center px-4"
+                  @click="go2Edit(item.id)"
+                >
+                  <UIcon name="i-carbon-edit" />
+                  <div>编辑</div>
+                </div>
+                <Confirm @ok="removeMemo(item.id)" @cancel="showToolbar = false">
+                  <div class="flex flex-row gap-1 cursor-pointer items-center px-4 text-red-300">
+                    <UIcon name="i-carbon-trash-can" />
+                    <div>删除</div>
+                  </div>
+                </Confirm>
+              </template>
             </div>
           </div>
           <template>
@@ -200,7 +217,7 @@
               <div
                 class="flex items-center justify-center gap-8 p-4 text-gray-500 dark:text-white h-[200px]"
               >
-                <template v-if="global.userinfo.id === 1">
+                <template v-if="isAdmin">
                   <div
                     class="flex flex-col gap-1 cursor-pointer items-center"
                     @click="setPinned(item.id)"
@@ -215,7 +232,7 @@
                     </div>
                   </div>
                 </template>
-                <template v-if="global && global.userinfo.id === item.userId">
+                <template v-if="isAdmin">
                   <div
                     class="flex flex-col gap-1 cursor-pointer items-center"
                     @click="go2Edit(item.id)"
@@ -230,8 +247,7 @@
                 </template>
                 <template
                   v-if="
-                    global.userinfo.id === 1 ||
-                    global.userinfo.id === item.userId
+                    isAdmin
                   "
                 >
                   <Confirm
@@ -256,6 +272,7 @@
         </div>
 
         <div
+          v-if="canViewInteractions && (item.favCount > 0 || sysConfig.enableComment)"
           class="rounded bottom-shadow bg-[#f7f7f7] dark:bg-[#202020] flex flex-col gap-1"
         >
           <div
@@ -332,6 +349,8 @@ const item = computed(() => {
 });
 
 const global = useGlobalState();
+const isAdmin = computed(() => global.userinfo.id === 1);
+const canViewInteractions = computed(() => sysConfig.value.showVisitorInteractions || isAdmin.value);
 
 const moreToolbar = ref(false);
 

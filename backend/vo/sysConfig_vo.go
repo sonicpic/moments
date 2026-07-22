@@ -30,6 +30,8 @@ type SysConfigVO struct {
 	EnableGoogleRecaptcha  bool                `json:"enableGoogleRecaptcha"`          //是否启用google recaptcha
 	GoogleSiteKey          string              `json:"googleSiteKey,omitempty"`        //google recaptcha siteKey
 	EnableComment          bool                `json:"enableComment"`                  //是否启用评论
+	ShowVisitorInteractions bool               `json:"showVisitorInteractions"`        //普通访客是否显示点赞和评论
+	EnableExternalAccess   bool                `json:"enableExternalAccess"`           //是否允许非管理员访问朋友圈
 	MaxCommentLength       int                 `json:"maxCommentLength,omitempty"`     //发言最大长度
 	MemoMaxHeight          int                 `json:"memoMaxHeight,omitempty"`        //单个memo的最大高度,单位px
 	CommentOrder           string              `json:"commentOrder,omitempty"`         //评论展示的顺序,asc:顺序,desc:逆序
@@ -63,6 +65,8 @@ type FullSysConfigVO struct {
 	GoogleSiteKey          string              `json:"googleSiteKey,omitempty"`        //google recaptcha siteKey
 	GoogleSecretKey        string              `json:"googleSecretKey,omitempty"`      //google recaptcha secretKey
 	EnableComment          bool                `json:"enableComment"`                  //是否启用评论
+	ShowVisitorInteractions bool               `json:"showVisitorInteractions"`        //普通访客是否显示点赞和评论
+	EnableExternalAccess   bool                `json:"enableExternalAccess"`           //是否允许非管理员访问朋友圈
 	MaxCommentLength       int                 `json:"maxCommentLength,omitempty"`     //发言最大长度
 	MemoMaxHeight          int                 `json:"memoMaxHeight,omitempty"`        //单个memo的最大高度,单位px
 	CommentOrder           string              `json:"commentOrder,omitempty"`         //评论展示的顺序,asc:顺序,desc:逆序

@@ -1,0 +1,7 @@
+.git
+front/.pnpm-store
+front/node_modules
+front/.nuxt
+front/.output
+backend/.idea
+**/.DS_Store
