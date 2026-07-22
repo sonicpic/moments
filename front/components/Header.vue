@@ -144,7 +144,7 @@
           class="text-[#9fc84a] w-5 h-5 cursor-pointer"
         />
       </NuxtLink>
-      <NuxtLink v-if="!global.userinfo.token" to="/user/login" title="登录">
+      <NuxtLink v-if="!sysConfig.hideMobileLogin && !global.userinfo.token" to="/user/login" title="登录">
         <UIcon
           name="i-carbon-login"
           class="text-[#9fc84a] w-5 h-5 cursor-pointer"
@@ -199,7 +199,11 @@
     <div class="absolute right-2 bottom-[-40px]">
       <div class="userinfo flex flex-col">
         <div class="flex flex-row items-center gap-4 justify-end">
-          <div class="username text-lg font-bold text-white">
+          <div
+            :class="!global.userinfo.token ? 'cursor-pointer select-none' : ''"
+            class="username text-lg font-bold text-white"
+            @dblclick="openLogin"
+          >
             {{ props.user.nickname }}
           </div>
           <img
@@ -234,6 +238,12 @@ let coverTipTimer: ReturnType<typeof setTimeout> | undefined;
 const logout = async () => {
   global.value.userinfo = {};
   await navigateTo("/");
+};
+
+const openLogin = async () => {
+  if (!global.value.userinfo.token) {
+    await navigateTo("/user/login");
+  }
 };
 
 const toggleMode = () => {

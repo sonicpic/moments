@@ -44,10 +44,10 @@
     </section>
 
     <section v-show="activeTab === 'appearance'" class="space-y-4">
-      <SettingsCard title="访客按钮" description="仅影响用户端入口；电脑端登录入口始终保留。">
+      <SettingsCard title="访客按钮" description="登录按钮隐藏后，未登录访客可双击首页昵称打开登录页。">
         <SettingToggle v-model="state.hideFriendLink" label="隐藏友情链接按钮" />
         <SettingToggle v-model="state.hideColorMode" label="隐藏深浅模式按钮" />
-        <SettingToggle v-model="state.hideMobileLogin" label="隐藏手机端登录按钮" />
+        <SettingToggle v-model="state.hideMobileLogin" label="隐藏所有设备的登录按钮" />
       </SettingsCard>
 
       <SettingsCard title="自定义扩展" description="样式和脚本会作用于整个站点，请仅粘贴可信内容。">

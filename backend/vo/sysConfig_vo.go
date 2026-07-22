@@ -41,7 +41,7 @@ type SysConfigVO struct {
 	BackgroundMusicList    []BackgroundMusicVO `json:"backgroundMusicList,omitempty"`  //背景音乐歌单
 	HideFriendLink         bool                `json:"hideFriendLink"`                 //隐藏友链入口
 	HideColorMode          bool                `json:"hideColorMode"`                  //隐藏深浅模式入口
-	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏移动端登录入口
+	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏所有平台的登录入口（保留字段名以兼容现有配置）
 	CoverDescription       string              `json:"coverDescription,omitempty"`     //背景图简介
 	Version                string              `json:"version,omitempty"`
 	CommitId               string              `json:"commitId,omitempty"`
@@ -74,7 +74,7 @@ type FullSysConfigVO struct {
 	BackgroundMusicList    []BackgroundMusicVO `json:"backgroundMusicList,omitempty"`  //背景音乐歌单
 	HideFriendLink         bool                `json:"hideFriendLink"`                 //隐藏友链入口
 	HideColorMode          bool                `json:"hideColorMode"`                  //隐藏深浅模式入口
-	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏移动端登录入口
+	HideMobileLogin        bool                `json:"hideMobileLogin"`                //隐藏所有平台的登录入口（保留字段名以兼容现有配置）
 	CoverDescription       string              `json:"coverDescription,omitempty"`     //背景图简介
 	EnableEmail            bool                `json:"enableEmail,omitempty"`          //是否启用邮箱
 	SmtpHost               string              `json:"smtpHost,omitempty"`             //smtp host
